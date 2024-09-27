@@ -1,4 +1,4 @@
-#w KA1N3D GiveUniformScript
+## KA1N3D GiveUniformScript
 
 **KA1N3D GiveUniformScript** is a straightforward FiveM script that allows players to share their EUP (Emergency Uniform Pack) uniforms with each other. Players can easily send their uniform details to another player, who can then accept and apply the uniform to their character. This feature enhances roleplay by facilitating realistic uniform exchanges among players.
 
