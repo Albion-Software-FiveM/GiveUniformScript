@@ -19,5 +19,5 @@
 5. Restart your server or run the command `refresh` and then `start GiveUniformScript` in the server console.
 
 ## Usage
-- Use the command `/giveuniform [Player ID]` to send your uniform to another player.
-- The recipient can accept the uniform by using `/acceptuniform [Your Player ID]`.
+- Use the command `/giveUniform [Player ID]` to send your uniform to another player.
+- The recipient can accept the uniform by using `/acceptUniform`.
