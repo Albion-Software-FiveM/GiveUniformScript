@@ -1,104 +1,94 @@
--- KA1N3D Software - Standalone Uniform Sharing Script
+-- KA1N3D Software - Standalone Uniform Exchange Script
 
-local OutstandingRequest = nil
+local pendingRequest = nil
 
--- Command to Give Uniform
-RegisterCommand("giveUniform", function(source, args, rawCommand)
-    if #args < 1 then
-        TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'You must provide a player ID to send your uniform to.')
-        print("[GiveUniform] No player was specified.")
-        return
-    end
+-- Function to collect player outfit data
+local function collectOutfitData(ped)
+    local outfitData = {clothes = {}, props = {}}
 
-    if tonumber(args[1]) == nil then
-        TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'You must provide a valid player ID.')
-        print("[GiveUniform] Invalid player was specified.")
-        return
-    end
-
-    local targetPlayerId = tonumber(args[1])
-    local playerCheck = Player(targetPlayerId).state.displayName
-
-    if playerCheck == nil then
-        TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'The player you tried to give your uniform to does not exist.')
-        print("[GiveUniform] Invalid player was specified.")
-        return
-    end
-
-    local SentData = {
-        Clothing = {},
-        Props = {}
-    }
-
-    local ownPed = PlayerPedId()
-
-    -- Gather Clothing Data
-    for index = 0, 11 do
-        if index ~= 0 and index ~= 2 then
-            local drawable = GetPedDrawableVariation(ownPed, index)
-            local texture = GetPedTextureVariation(ownPed, index)
-            table.insert(SentData.Clothing, {
-                component = index,
-                drawable = drawable,
-                texture = texture
+    -- Collect clothing data (excluding some components)
+    for compIndex = 1, 11 do
+        if compIndex ~= 0 and compIndex ~= 2 then
+            table.insert(outfitData.clothes, {
+                component = compIndex,
+                drawable = GetPedDrawableVariation(ped, compIndex),
+                texture = GetPedTextureVariation(ped, compIndex)
             })
         end
     end
 
-    -- Gather Prop Data (hats, glasses, etc.)
-    for index = 0, 2 do
-        local drawable = GetPedPropIndex(ownPed, index)
-        local texture = GetPedPropTextureIndex(ownPed, index)
-        table.insert(SentData.Props, {
-            component = index,
-            drawable = drawable,
-            texture = texture
+    -- Collect prop data (like hats and glasses)
+    for propIndex = 0, 2 do
+        table.insert(outfitData.props, {
+            component = propIndex,
+            drawable = GetPedPropIndex(ped, propIndex),
+            texture = GetPedPropTextureIndex(ped, propIndex)
         })
     end
 
-    -- Notify the sender
-    TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'You have sent ' .. playerCheck .. ' your uniform.')
+    return outfitData
+end
 
-    -- Send uniform to server
-    TriggerServerEvent("ka1n3dSoftware:sendUniform", targetPlayerId, SentData)
-end)
-
--- Event triggered when the uniform is sent
-RegisterNetEvent("ka1n3dSoftware:receiveUniform")
-AddEventHandler("ka1n3dSoftware:receiveUniform", function(fromPlayer, clothingData)
-    OutstandingRequest = clothingData
-
-    -- Notify the receiving player
-    TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, Player(tonumber(fromPlayer)).state.displayName .. ' has sent you their uniform. Type /acceptUniform to accept or /denyUniform to reject.')
-end)
-
--- Command to Deny Uniform
-RegisterCommand("denyUniform", function(source, args, rawCommand)
-    OutstandingRequest = nil
-
-    -- Notify the player
-    TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'You have rejected the uniform request.')
-end)
-
--- Command to Accept Uniform
-RegisterCommand("acceptUniform", function(source, args, rawCommand)
-    if OutstandingRequest == nil then
-        TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'There is no uniform request to accept.')
+-- Command to give outfit
+RegisterCommand("giveuniform", function(source, args)
+    if #args < 1 then
+        TriggerEvent('chatMessage', "uniform", {255, 0, 0}, "Please specify a valid player ID.")
         return
     end
 
-    local ownPed = PlayerPedId()
+    local targetId = tonumber(args[1])
+    if not targetId or GetPlayerName(targetId) == nil then
+        TriggerEvent('chatMessage', "uniform", {255, 0, 0}, "Invalid player ID provided.")
+        return
+    end
+
+    local playerName = GetPlayerName(targetId)
+    local uniformData = collectOutfitData(PlayerPedId())
+
+    -- Notify the player and send uniform data to the server
+    TriggerEvent('chatMessage', "uniform", {0, 255, 0}, "You have sent your uniform to " .. playerName .. ".")
+    TriggerServerEvent("ka1n3d:sendUniformData", targetId, uniformData)
+end)
+
+-- Event to receive uniform data
+RegisterNetEvent("ka1n3d:receiveUniformData")
+AddEventHandler("ka1n3d:receiveUniformData", function(senderId, uniformData)
+    local senderName = GetPlayerName(senderId)
+
+    -- Store pending request and notify the player
+    pendingRequest = uniformData
+    TriggerEvent('chatMessage', "uniform", {0, 255, 0}, senderName .. " has sent you a uniform. Use /acceptuniform or /denyuniform.")
+end)
+
+-- Command to reject a uniform request
+RegisterCommand("denyuniform", function(source, args)
+    if not pendingRequest then
+        TriggerEvent('chatMessage', "uniform", {255, 0, 0}, "No uniform request to deny.")
+        return
+    end
+
+    pendingRequest = nil
+    TriggerEvent('chatMessage', "uniform", {255, 0, 0}, "You have rejected the uniform request.")
+end)
+
+-- Command to accept a uniform request
+RegisterCommand("acceptuniform", function(source, args)
+    if not pendingRequest then
+        TriggerEvent('chatMessage', "uniform", {255, 0, 0}, "No uniform request to accept.")
+        return
+    end
+
+    local ped = PlayerPedId()
 
     -- Apply the received uniform
-    for _, data in pairs(OutstandingRequest.Clothing) do
-        SetPedComponentVariation(ownPed, data.component, data.drawable, data.texture, 0)
+    for _, item in pairs(pendingRequest.clothes) do
+        SetPedComponentVariation(ped, item.component, item.drawable, item.texture, 0)
     end
 
-    for _, data in pairs(OutstandingRequest.Props) do
-        SetPedPropIndex(ownPed, data.component, data.drawable, data.texture, 0)
+    for _, item in pairs(pendingRequest.props) do
+        SetPedPropIndex(ped, item.component, item.drawable, item.texture, true)
     end
 
-    -- Clear the request and notify the player
-    OutstandingRequest = nil
-    TriggerEvent('chatMessage', "Give Uniform", {226, 0, 57}, 'You have accepted the uniform request.')
+    pendingRequest = nil
+    TriggerEvent('chatMessage', "uniform", {0, 255, 0}, "You have accepted the uniform request.")
 end)
