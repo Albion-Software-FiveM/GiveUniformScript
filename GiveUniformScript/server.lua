@@ -1,6 +1,6 @@
--- KA1N3D Software - Server-Side Uniform Transfer Handling
-
+-- Server-side script to handle sending the uniform data
 RegisterNetEvent("ka1n3dSoftware:sendUniform")
-AddEventHandler("ka1n3dSoftware:sendUniform", function(playerId, clothingData)
-    TriggerClientEvent("ka1n3dSoftware:receiveUniform", playerId, source, clothingData)
+AddEventHandler("ka1n3dSoftware:sendUniform", function(targetPlayerId, uniformData)
+    local sourcePlayer = source
+    TriggerClientEvent("ka1n3dSoftware:receiveUniform", targetPlayerId, sourcePlayer, uniformData)
 end)
